@@ -27,7 +27,7 @@ module rf_riscv(
             read_data2_o = rf_mem[read_addr2_i];
     end
     
-    always @ (clk_i) begin
+  always_ff @ (posedge clk_i) begin
         if (write_enable_i)
             rf_mem[write_addr_i] <= write_data_i;
     end
