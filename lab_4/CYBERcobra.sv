@@ -34,7 +34,7 @@ module CYBERcobra (
     assign RA2 = data[17:13];
     assign offset_const = {{22{data[12]}}, data[12:5], 2'b00};
     assign WA = data[4:0];
-    assign RF_const = { {10{data[27]}}, data[27:5]};
+    assign RF_const = { {9{data[27]}}, data[27:5]};
     
     assign b = J || (B && flag) ? offset_const : 32'd4;
     
@@ -53,7 +53,7 @@ module CYBERcobra (
     
     rf_riscv reg_file(
       .clk_i            (clk_i),
-      .write_enable_i   (!B),
+      .write_enable_i   (!(J || B)),
       
       .write_addr_i     (WA), 
       .read_addr1_i     (RA1), 
