@@ -16,10 +16,11 @@ module riscv_core (
 );
 
     logic [31:0] pc;
-    logic [31:0] data;
-    logic J;
-    logic B;
-    logic [1:0] WS;
+
+    logic [31:0] adder_2_op_2;
+    logic [31:0] adder_1_o;
+    logic [31:0] adder_2_o;
+    
     logic [4:0] ALUop;
     logic [4:0] RA1;
     logic [4:0] RA2;
@@ -35,6 +36,9 @@ module riscv_core (
     logic [2:0] b_sel;
     logic wb_sel;
     logic gpr_we;
+    logic branch;
+    logic jal;
+    logic jalr;
     logic [31:0] wb_data;
     logic [31:0] data_for_alu_1;
     logic [31:0] data_for_alu_2;
@@ -44,32 +48,32 @@ module riscv_core (
     
     logic [31:0] new_pc;
     
-    assign ALUop = data[27:23];
-    assign RA2 = data[24:20];
-    assign RA1 = data[19:15];
-    assign WA = data[11:7];
+    assign ALUop = instr_i[27:23];
+    assign RA2 = instr_i[24:20];
+    assign RA1 = instr_i[19:15];
+    assign WA = instr_i[11:7];
     
     assign imm_I = { {20{instr_i[31]}}, instr_i[31:20]};
     assign imm_U = { instr_i[31:12], {12{1'b0}}};
     assign imm_S = { {20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
     assign imm_B = { {19{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
-    assign imm_J = { {9{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
+    assign imm_J = { {11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
     
     
     fulladder32 adder_1(
-      .a_i      (pc), 
-      .b_i      (b), 
+      .a_i      (RD1), 
+      .b_i      (imm_I), 
       .carry_i  (1'b0),
       .carry_o  (), 
-      .sum_o    (new_pc)
+      .sum_o    (adder_1_o)
     );
     
     fulladder32 adder_2(
       .a_i      (pc), 
-      .b_i      (b), 
+      .b_i      (adder_2_op_2), 
       .carry_i  (1'b0),
       .carry_o  (), 
-      .sum_o    (new_pc)
+      .sum_o    (adder_2_o)
     );
     
     rf_riscv reg_file(
@@ -89,7 +93,7 @@ module riscv_core (
       .a_i      (data_for_alu_1), 
       .b_i      (data_for_alu_2), 
       .alu_op_i (ALUop), 
-      .flag_o   (),
+      .flag_o   (flag),
       .result_o (data_from_alu)
     );
 
@@ -104,11 +108,11 @@ decoder_riscv decoder(
   .mem_we_o         (mem_we_o),
   .mem_size_o       (mem_size_o),
   .gpr_we_o         (gpr_we),
-  .wb_sel_o         (),
+  .wb_sel_o         (wb_sel),
   .illegal_instr_o  (),
-  .branch_o         (),
-  .jal_o            (),
-  .jalr_o           (),
+  .branch_o         (branch),
+  .jal_o            (jal),
+  .jalr_o           (jalr),
   .mret_o           ()
 );
 
@@ -120,9 +124,9 @@ decoder_riscv decoder(
     
     always_comb begin
         case(a_sel)
-            0: data_for_alu_2 = RD1;
-            1: data_for_alu_2 = pc;
-            2: data_for_alu_2 = 0;
+            0: data_for_alu_1 = RD1;
+            1: data_for_alu_1 = pc;
+            2: data_for_alu_1 = 0;
         endcase
       
         case(b_sel)
@@ -138,6 +142,10 @@ decoder_riscv decoder(
             0: wb_data = data_from_alu;
             1: wb_data = mem_rd_i;
         endcase
+        
+        adder_2_op_2 = jal || (flag && branch) ? (branch ? imm_B : imm_J) : 4;
+        
+        new_pc = jalr ? adder_1_o : adder_2_o;
     end
     
     assign mem_wd_o = RD2;
