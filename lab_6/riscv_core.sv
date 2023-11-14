@@ -21,10 +21,11 @@ module riscv_core (
     logic [31:0] adder_1_o;
     logic [31:0] adder_2_o;
     
-    logic [4:0] ALUop;
+    
     logic [4:0] RA1;
     logic [4:0] RA2;
     logic [4:0] WA;
+    
     logic [31:0] imm_I;
     logic [31:0] imm_U;
     logic [31:0] imm_S;
@@ -34,11 +35,13 @@ module riscv_core (
     logic flag;
     logic [1:0] a_sel;
     logic [2:0] b_sel;
-    logic wb_sel;
+    logic [4:0] ALUop;
     logic gpr_we;
+    logic wb_sel;
     logic branch;
     logic jal;
     logic jalr;
+    
     logic [31:0] wb_data;
     logic [31:0] data_for_alu_1;
     logic [31:0] data_for_alu_2;
@@ -48,7 +51,6 @@ module riscv_core (
     
     logic [31:0] new_pc;
     
-    assign ALUop = instr_i[27:23];
     assign RA2 = instr_i[24:20];
     assign RA1 = instr_i[19:15];
     assign WA = instr_i[11:7];
@@ -116,11 +118,17 @@ decoder_riscv decoder(
   .mret_o           ()
 );
 
+    assign adder_2_op_2 = jal || (flag && branch) ? (branch ? imm_B : imm_J) : 4;
+    assign new_pc = jalr ? adder_1_o : adder_2_o;
+    assign wb_data = wb_sel ? mem_rd_i : data_from_alu;
+    
     always_ff @ (posedge clk_i) begin
       if (rst_i) pc <= 32'd0;
       else if (!stall_i)
         pc <= new_pc;
     end  
+    
+    assign instr_addr_o = pc;
     
     always_comb begin
         case(a_sel)
@@ -135,21 +143,14 @@ decoder_riscv decoder(
             2: data_for_alu_2 = imm_U;
             3: data_for_alu_2 = imm_S;
             4: data_for_alu_2 = 4;
-            default: data_for_alu_2 = 32'd0;
         endcase
-        
-        case(wb_sel)
-            0: wb_data = data_from_alu;
-            1: wb_data = mem_rd_i;
-        endcase
-        
-        adder_2_op_2 = jal || (flag && branch) ? (branch ? imm_B : imm_J) : 4;
-        
-        new_pc = jalr ? adder_1_o : adder_2_o;
+
     end
     
+    
+    
     assign mem_wd_o = RD2;
-    assign instr_addr_o = pc;
+    
     assign mem_addr_o = data_from_alu;
 
 endmodule
