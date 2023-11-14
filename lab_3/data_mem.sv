@@ -11,18 +11,18 @@ module data_mem(
 
     always_ff @(posedge clk_i) begin
         if (!mem_req_i)
-            read_data_o = 32'hfa11_1eaf;
+            read_data_o <= 32'hfa11_1eaf;
         else if (!write_enable_i) begin
             if (addr_i > 16383)
-                read_data_o = 32'hdead_beef;
+                read_data_o <= 32'hdead_beef;
             else
                 read_data_o <= memory[addr_i >>> 2];
         end
          else begin
             if (addr_i > 16383)
-                read_data_o = 32'hdead_beef;
+                read_data_o <= 32'hdead_beef;
             else
-                read_data_o = 32'hfa11_1eaf;
+                read_data_o <= 32'hfa11_1eaf;
                 memory[addr_i >>> 2] <= write_data_i;
          end
     end 
