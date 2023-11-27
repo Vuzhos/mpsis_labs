@@ -65,6 +65,9 @@ module riscv_core (
     assign imm_J = { {11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
     assign imm_Z = { {27{instr_i[19]}}, instr_i[19:15]};
     
+    logic mem_req;
+    logic mem_we;
+    
     logic mret;
     logic ill_instr;
     logic csr_we;
@@ -124,8 +127,8 @@ module riscv_core (
       .alu_op_o         (ALUop),
       .csr_op_o         (csr_op),
       .csr_we_o         (csr_we),
-      .mem_req_o        (mem_req_o && !trap),
-      .mem_we_o         (mem_we_o && !trap),
+      .mem_req_o        (mem_req),
+      .mem_we_o         (mem_we),
       .mem_size_o       (mem_size_o),
       .gpr_we_o         (gpr_we),
       .wb_sel_o         (wb_sel),
@@ -135,6 +138,9 @@ module riscv_core (
       .jalr_o           (jalr),
       .mret_o           (mret)
     );
+    
+    assign mem_req_o = mem_req && !trap;
+    assign mem_we_o = mem_we && !trap;
     
     csr_controller csr(
       .clk_i (clk_i),
@@ -151,7 +157,7 @@ module riscv_core (
       .write_enable_i (csr_we),
 
       .read_data_o (csr_wd),
-      .mie_o,
+      .mie_o (mie),
       .mepc_o (mepc),
       .mtvec_o (mtvec)
     );
