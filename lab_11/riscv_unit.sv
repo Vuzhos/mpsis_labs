@@ -22,6 +22,9 @@ module riscv_unit(
     logic memory_writeenable;
     logic memory_requiered;
     
+    logic irq_req;
+    logic irq_ret;
+    
     instr_mem instr_memory(
         .addr_i(instr_addr),
         .read_data_o(instr)
@@ -34,7 +37,7 @@ module riscv_unit(
         .stall_i(stall),
         .instr_i(instr),
         .mem_rd_i(memory_rd),
-        .irq_req_i(),
+        .irq_req_i(irq_req),
 
         .instr_addr_o(instr_addr),
         .mem_addr_o(memory_addr),
@@ -42,7 +45,7 @@ module riscv_unit(
         .mem_req_o(mem_req),
         .mem_we_o(mem_we),
         .mem_wd_o(memory_wd),
-        .irq_ret_o()
+        .irq_ret_o(irq_ret)
     );
     
     riscv_lsu lsu(
