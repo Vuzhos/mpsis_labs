@@ -2,24 +2,24 @@ module riscv_unit(
   input  logic        clk_i,
   input  logic        resetn_i,
   
-  input  logic [15:0] sw_i,       // Переключатели
+  input  logic [15:0] sw_i,       // ГЏГҐГ°ГҐГЄГ«ГѕГ·Г ГІГҐГ«ГЁ
 
-  output logic [15:0] led_o,      // Светодиоды
+  output logic [15:0] led_o,      // Г‘ГўГҐГІГ®Г¤ГЁГ®Г¤Г»
 
-  input  logic        kclk_i,     // Тактирующий сигнал клавиатуры
-  input  logic        kdata_i,    // Сигнал данных клавиатуры
+  input  logic        kclk_i,     // Г’Г ГЄГІГЁГ°ГіГѕГ№ГЁГ© Г±ГЁГЈГ­Г Г« ГЄГ«Г ГўГЁГ ГІГіГ°Г»
+  input  logic        kdata_i,    // Г‘ГЁГЈГ­Г Г« Г¤Г Г­Г­Г»Гµ ГЄГ«Г ГўГЁГ ГІГіГ°Г»
 
-  output logic [ 6:0] hex_led_o,  // Вывод семисегментных индикаторов
-  output logic [ 7:0] hex_sel_o,  // Селектор семисегментных индикаторов
+  output logic [ 6:0] hex_led_o,  // Г‚Г»ГўГ®Г¤ Г±ГҐГ¬ГЁГ±ГҐГЈГ¬ГҐГ­ГІГ­Г»Гµ ГЁГ­Г¤ГЁГЄГ ГІГ®Г°Г®Гў
+  output logic [ 7:0] hex_sel_o,  // Г‘ГҐГ«ГҐГЄГІГ®Г° Г±ГҐГ¬ГЁГ±ГҐГЈГ¬ГҐГ­ГІГ­Г»Гµ ГЁГ­Г¤ГЁГЄГ ГІГ®Г°Г®Гў
 
-  input  logic        rx_i,       // Линия приема по UART
-  output logic        tx_o,       // Линия передачи по UART
+  input  logic        rx_i,       // Г‹ГЁГ­ГЁГї ГЇГ°ГЁГҐГ¬Г  ГЇГ® UART
+  output logic        tx_o,       // Г‹ГЁГ­ГЁГї ГЇГҐГ°ГҐГ¤Г Г·ГЁ ГЇГ® UART
 
-  output logic [3:0]  vga_r_o,    // красный канал vga
-  output logic [3:0]  vga_g_o,    // зеленый канал vga
-  output logic [3:0]  vga_b_o,    // синий канал vga
-  output logic        vga_hs_o,   // линия горизонтальной синхронизации vga
-  output logic        vga_vs_o    // линия вертикальной синхронизации vga
+  output logic [3:0]  vga_r_o,    // ГЄГ°Г Г±Г­Г»Г© ГЄГ Г­Г Г« vga
+  output logic [3:0]  vga_g_o,    // Г§ГҐГ«ГҐГ­Г»Г© ГЄГ Г­Г Г« vga
+  output logic [3:0]  vga_b_o,    // Г±ГЁГ­ГЁГ© ГЄГ Г­Г Г« vga
+  output logic        vga_hs_o,   // Г«ГЁГ­ГЁГї ГЈГ®Г°ГЁГ§Г®Г­ГІГ Г«ГјГ­Г®Г© Г±ГЁГ­ГµГ°Г®Г­ГЁГ§Г Г¶ГЁГЁ vga
+  output logic        vga_vs_o    // Г«ГЁГ­ГЁГї ГўГҐГ°ГІГЁГЄГ Г«ГјГ­Г®Г© Г±ГЁГ­ГµГ°Г®Г­ГЁГ§Г Г¶ГЁГЁ vga
 );
     logic sysclk, rst;
     sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(10),.sys_clk_o(sysclk), .sys_reset_o(rst));
@@ -101,7 +101,7 @@ module riscv_unit(
     );
     
     vga_sb_ctrl vga_ctrl(
-        .clk_i          (clk_i),
+        .clk_i          (sysclk),
         .rst_i          (rst),
         .clk100m_i      (sysclk),
         .req_i          ((addr == 7) && memory_requiered),
