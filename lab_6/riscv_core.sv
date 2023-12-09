@@ -127,9 +127,6 @@ module riscv_core (
         pc <= new_pc;
     end  
     
-    assign instr_addr_o = pc;
-
-    assign wb_data = wb_sel ? mem_rd_i : data_from_alu;
     always_comb begin
         case(a_sel)
             0: data_for_alu_1 = RD1;
@@ -144,8 +141,14 @@ module riscv_core (
             3: data_for_alu_2 = imm_S;
             4: data_for_alu_2 = 4;
         endcase
+
+        case(wb_data)
+            0: wb_data = data_from_alu;
+            1: wb_data = mem_rd_i;
+        endcase
     end
-    
+
+    assign instr_addr_o = pc;
     assign mem_wd_o = RD2;
     assign mem_addr_o = data_from_alu;
   
