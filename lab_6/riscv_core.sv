@@ -37,7 +37,7 @@ module riscv_core (
     logic [2:0] b_sel;
     logic [4:0] ALUop;
     logic gpr_we;
-    logic wb_sel;
+    logic [1:0] wb_sel;
     logic branch;
     logic jal;
     logic jalr;
@@ -99,28 +99,27 @@ module riscv_core (
       .result_o (data_from_alu)
     );
 
-decoder_riscv decoder(
-  .fetched_instr_i  (instr_i),
-  .a_sel_o          (a_sel),
-  .b_sel_o          (b_sel),
-  .alu_op_o         (ALUop),
-  .csr_op_o         (),
-  .csr_we_o         (),
-  .mem_req_o        (mem_req_o),
-  .mem_we_o         (mem_we_o),
-  .mem_size_o       (mem_size_o),
-  .gpr_we_o         (gpr_we),
-  .wb_sel_o         (wb_sel),
-  .illegal_instr_o  (),
-  .branch_o         (branch),
-  .jal_o            (jal),
-  .jalr_o           (jalr),
-  .mret_o           ()
-);
+    decoder_riscv decoder(
+      .fetched_instr_i  (instr_i),
+      .a_sel_o          (a_sel),
+      .b_sel_o          (b_sel),
+      .alu_op_o         (ALUop),
+      .csr_op_o         (),
+      .csr_we_o         (),
+      .mem_req_o        (mem_req_o),
+      .mem_we_o         (mem_we_o),
+      .mem_size_o       (mem_size_o),
+      .gpr_we_o         (gpr_we),
+      .wb_sel_o         (wb_sel),
+      .illegal_instr_o  (),
+      .branch_o         (branch),
+      .jal_o            (jal),
+      .jalr_o           (jalr),
+      .mret_o           ()
+    );
 
     assign adder_2_op_2 = jal || (flag && branch) ? (branch ? imm_B : imm_J) : 4;
     assign new_pc = jalr ? adder_1_o : adder_2_o;
-    assign wb_data = wb_sel ? mem_rd_i : data_from_alu;
     
     always_ff @ (posedge clk_i) begin
       if (rst_i) pc <= 32'd0;
@@ -129,7 +128,8 @@ decoder_riscv decoder(
     end  
     
     assign instr_addr_o = pc;
-    
+
+    assign wb_data = wb_sel ? mem_rd_i : data_from_alu;
     always_comb begin
         case(a_sel)
             0: data_for_alu_1 = RD1;
@@ -144,13 +144,9 @@ decoder_riscv decoder(
             3: data_for_alu_2 = imm_S;
             4: data_for_alu_2 = 4;
         endcase
-
     end
     
-    
-    
     assign mem_wd_o = RD2;
-    
     assign mem_addr_o = data_from_alu;
-
+  
 endmodule
