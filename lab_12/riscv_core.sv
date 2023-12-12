@@ -6,13 +6,15 @@ module riscv_core (
   input  logic        stall_i,
   input  logic [31:0] instr_i,
   input  logic [31:0] mem_rd_i,
+  input  logic        irq_req_i,
 
   output logic [31:0] instr_addr_o,
   output logic [31:0] mem_addr_o,
   output logic [ 2:0] mem_size_o,
   output logic        mem_req_o,
   output logic        mem_we_o,
-  output logic [31:0] mem_wd_o
+  output logic [31:0] mem_wd_o,
+  output logic        irq_ret_o
 );
 
     logic [31:0] pc;
@@ -60,7 +62,24 @@ module riscv_core (
     assign imm_S = { {20{instr_i[31]}}, instr_i[31:25], instr_i[11:7]};
     assign imm_B = { {19{instr_i[31]}}, instr_i[31], instr_i[7], instr_i[30:25], instr_i[11:8], 1'b0};
     assign imm_J = { {11{instr_i[31]}}, instr_i[31], instr_i[19:12], instr_i[20], instr_i[30:21], 1'b0};
+    assign imm_Z = { {27{instr_i[19]}}, instr_i[19:15]};
     
+    logic mem_req;
+    logic mem_we;
+    
+    logic mret;
+    logic ill_instr;
+    logic csr_we;
+    logic [2:0] csr_op;
+    logic [31:0] csr_wd;
+    logic [31:0] mie;
+    logic [31:0] mepc;
+    logic [31:0] mtvec;
+    
+    logic irq_o;
+    logic irq_cause;
+    logic trap;
+    assign trap = irq_o || ill_instr; 
     
     fulladder32 adder_1(
       .a_i      (RD1), 
@@ -80,7 +99,7 @@ module riscv_core (
     
     rf_riscv reg_file(
       .clk_i            (clk_i),
-      .write_enable_i   (gpr_we && !stall_i),
+      .write_enable_i   (gpr_we && !(stall_i || trap)),
       
       .write_addr_i     (WA), 
       .read_addr1_i     (RA1), 
@@ -104,22 +123,58 @@ module riscv_core (
       .a_sel_o          (a_sel),
       .b_sel_o          (b_sel),
       .alu_op_o         (ALUop),
-      .csr_op_o         (),
-      .csr_we_o         (),
-      .mem_req_o        (mem_req_o),
-      .mem_we_o         (mem_we_o),
+      .csr_op_o         (csr_op),
+      .csr_we_o         (csr_we),
+      .mem_req_o        (mem_req),
+      .mem_we_o         (mem_we),
       .mem_size_o       (mem_size_o),
       .gpr_we_o         (gpr_we),
       .wb_sel_o         (wb_sel),
-      .illegal_instr_o  (),
+      .illegal_instr_o  (ill_instr),
       .branch_o         (branch),
       .jal_o            (jal),
       .jalr_o           (jalr),
-      .mret_o           ()
+      .mret_o           (mret)
+    );
+    
+    assign mem_req_o = mem_req && !trap;
+    assign mem_we_o = mem_we && !trap;
+    
+    csr_controller csr(
+      .clk_i (clk_i),
+      .rst_i (rst_i),
+      .trap_i (trap),
+
+      .opcode_i (csr_op),
+
+      .addr_i (instr_i[31:20]),
+      .pc_i (pc),
+      .mcause_i (ill_instr ? 32'h0000_0002 : irq_cause),
+      .rs1_data_i (RD1),
+      .imm_data_i (imm_Z),
+      .write_enable_i (csr_we),
+
+      .read_data_o (csr_wd),
+      .mie_o (mie),
+      .mepc_o (mepc),
+      .mtvec_o (mtvec)
+    );
+     
+    interrupt_controller irq(
+      .clk_i (clk_i),
+      .rst_i (rst_i),
+      .exception_i (ill_instr),
+      .irq_req_i (irq_req_i),
+      .mie_i (mie[0]),
+      .mret_i (mret),
+    
+      .irq_ret_o (irq_ret_o),
+      .irq_cause_o (irq_cause),
+      .irq_o (irq_o)
     );
 
     assign adder_2_op_2 = jal || (flag && branch) ? (branch ? imm_B : imm_J) : 4;
-    assign new_pc = jalr ? adder_1_o : adder_2_o;
+    assign new_pc = mret ? mepc : (trap ? mtvec : (jalr ? adder_1_o : adder_2_o));
     
     always_ff @ (posedge clk_i) begin
       if (rst_i) pc <= 32'd0;
@@ -145,6 +200,7 @@ module riscv_core (
         case(wb_data)
             0: wb_data = data_from_alu;
             1: wb_data = mem_rd_i;
+            2: wb_data = csr_wd;
         endcase
     end
 
