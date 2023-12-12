@@ -2,27 +2,27 @@ module riscv_unit(
   input  logic        clk_i,
   input  logic        resetn_i,
   
-  input  logic [15:0] sw_i,       // Ïåðåêëþ÷àòåëè
+  input  logic [15:0] sw_i,       // Переключатели
 
-  output logic [15:0] led_o,      // Ñâåòîäèîäû
+  output logic [15:0] led_o,      // Светодиоды
 
-  input  logic        kclk_i,     // Òàêòèðóþùèé ñèãíàë êëàâèàòóðû
-  input  logic        kdata_i,    // Ñèãíàë äàííûõ êëàâèàòóðû
+  input  logic        kclk_i,     // Тактирующий сигнал клавиатуры
+  input  logic        kdata_i,    // Сигнал данных клавиатуры
 
-  output logic [ 6:0] hex_led_o,  // Âûâîä ñåìèñåãìåíòíûõ èíäèêàòîðîâ
-  output logic [ 7:0] hex_sel_o,  // Ñåëåêòîð ñåìèñåãìåíòíûõ èíäèêàòîðîâ
+  output logic [ 6:0] hex_led_o,  // Вывод семисегментных индикаторов
+  output logic [ 7:0] hex_sel_o,  // Селектор семисегментных индикаторов
 
-  input  logic        rx_i,       // Ëèíèÿ ïðèåìà ïî UART
-  output logic        tx_o,       // Ëèíèÿ ïåðåäà÷è ïî UART
+  input  logic        rx_i,       // Линия приема по UART
+  output logic        tx_o,       // Линия передачи по UART
 
-  output logic [3:0]  vga_r_o,    // êðàñíûé êàíàë vga
-  output logic [3:0]  vga_g_o,    // çåëåíûé êàíàë vga
-  output logic [3:0]  vga_b_o,    // ñèíèé êàíàë vga
-  output logic        vga_hs_o,   // ëèíèÿ ãîðèçîíòàëüíîé ñèíõðîíèçàöèè vga
-  output logic        vga_vs_o    // ëèíèÿ âåðòèêàëüíîé ñèíõðîíèçàöèè vga
+  output logic [3:0]  vga_r_o,    // красный канал vga
+  output logic [3:0]  vga_g_o,    // зеленый канал vga
+  output logic [3:0]  vga_b_o,    // синий канал vga
+  output logic        vga_hs_o,   // линия горизонтальной синхронизации vga
+  output logic        vga_vs_o    // линия вертикальной синхронизации vga
 );
     logic sysclk, rst;
-    sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(10),.sys_clk_o(sysclk), .sys_reset_o(rst));
+    sys_clk_rst_gen divider(.ex_clk_i(clk_i),.ex_areset_n_i(resetn_i),.div_i(4'b10),.sys_clk_o(sysclk), .sys_reset_o(rst));
     
     logic [31:0] instr_addr;
     logic [31:0] instr;
@@ -34,7 +34,7 @@ module riscv_unit(
     logic mem_req;
     logic mem_we;
     logic [3:0] memory_be;
-    logic [2:0] mem_size_o;
+    logic [2:0] mem_size;
     
     logic [31:0] memory_readdata;
     logic [31:0] memory_address;
@@ -46,6 +46,10 @@ module riscv_unit(
     
     logic [31:0] memory_out;
     logic [31:0] vga_out;
+    logic [31:0] ps2_out;
+    
+    logic irq_req;
+    logic irq_ret;
     
     logic [7:0] addr;
     assign addr = memory_address[31:24];
@@ -62,12 +66,14 @@ module riscv_unit(
         .stall_i        (stall),
         .instr_i        (instr),
         .mem_rd_i       (memory_rd),
+        .irq_req_i      (irq_req),
         .instr_addr_o   (instr_addr),
         .mem_addr_o     (memory_addr),
-        .mem_size_o     (mem_size_o),
+        .mem_size_o     (mem_size),
         .mem_req_o      (mem_req),
         .mem_we_o       (mem_we),
-        .mem_wd_o       (memory_wd)
+        .mem_wd_o       (memory_wd),
+        .irq_ret_o      (irq_ret)
     );
     
     riscv_lsu lsu(
@@ -75,7 +81,7 @@ module riscv_unit(
         .rst_i          (rst),
         .core_req_i     (mem_req),
         .core_we_i      (mem_we),
-        .core_size_i    (mem_size_o),
+        .core_size_i    (mem_size),
         .core_addr_i    (memory_addr),
         .core_wd_i      (memory_wd),
         .core_rd_o      (memory_rd),
@@ -86,7 +92,7 @@ module riscv_unit(
         .mem_addr_o     (memory_address),
         .mem_wd_o       (memory_writedata),
         .mem_rd_i       (memory_readdata),
-        .mem_ready_i    (1)
+        .mem_ready_i    (1'b1)
     );
     
     ext_mem data_mem(
@@ -98,6 +104,20 @@ module riscv_unit(
         .write_data_i   (memory_writedata),
         .read_data_o    (memory_out),
         .ready_o        ()
+    );
+    
+    ps2_sb_ctrl ps2_ctrl(
+        .clk_i                  (sysclk),
+        .rst_i                  (rst),
+        .addr_i                 (addr_for_periph),
+        .req_i                  ((addr == 3) && memory_requiered),
+        .write_data_i           (memory_writedata),
+        .write_enable_i         (memory_writeenable),
+        .read_data_o            (ps2_out),
+        .interrupt_request_o    (irq_req),
+        .interrupt_return_i     (irq_ret),
+        .kclk_i                 (kclk_i),
+        .kdata_i                (kdata_i)
     );
     
     vga_sb_ctrl vga_ctrl(
@@ -120,11 +140,10 @@ module riscv_unit(
     always_comb begin
         case(addr)
             0: memory_readdata = memory_out;
+            3: memory_readdata = ps2_out;
             7: memory_readdata = vga_out;
             default: memory_readdata = 0;
         endcase
     end
 
 endmodule
-
-
