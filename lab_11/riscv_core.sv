@@ -151,7 +151,7 @@ module riscv_core (
 
       .addr_i (instr_i[31:20]),
       .pc_i (new_pc),
-      .mcause_i (irq_cause ? 32'h0000_0002 : irq_cause),
+      .mcause_i (ill_instr ? 32'h0000_0002 : irq_cause),
       .rs1_data_i (RD1),
       .imm_data_i (imm_Z),
       .write_enable_i (csr_we),
