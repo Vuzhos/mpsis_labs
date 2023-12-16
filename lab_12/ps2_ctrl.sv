@@ -42,25 +42,31 @@ module ps2_sb_ctrl(
     );
       
     always_ff @ (posedge clk_i) begin
-        if (keycode_valid) begin
-            scan_code <= keycode;
-            scan_code_is_unread <= 1;
+        if(rst_i) begin
+            scan_code <= 0;
+            scan_code_is_unread <= 0;
         end
-        else if (interrupt_return_i) scan_code_is_unread <= 0;
-        
-        if (req_i) begin
-            if (write_enable_i) begin
-                if (addr_i == 32'h24) begin
-                    scan_code <= 0;
-                    scan_code_is_unread <= 0;
-                end
+        else begin
+            if (keycode_valid) begin
+                scan_code <= keycode;
+                scan_code_is_unread <= 1;
             end
-            else begin
-                if (addr_i == 0) begin
-                    read_data_o <= {{24{1'b0}}, scan_code};
-                    if (!keycode_valid) scan_code_is_unread <= 0;
+            else if (interrupt_return_i) scan_code_is_unread <= 0;
+        
+            if (req_i) begin
+                if (write_enable_i) begin
+                    if (addr_i == 32'h24) begin
+                        scan_code <= 0;
+                        scan_code_is_unread <= 0;
+                    end
                 end
-                else if (addr_i == 32'h4) read_data_o <= {{31{1'b0}}, scan_code_is_unread};
+                else begin
+                    if (addr_i == 0) begin
+                        read_data_o <= {{24{1'b0}}, scan_code};
+                        if (!keycode_valid) scan_code_is_unread <= 0;
+                    end
+                    else if (addr_i == 32'h4) read_data_o <= {{31{1'b0}}, scan_code_is_unread};
+                end
             end
         end
     end
