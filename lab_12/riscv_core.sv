@@ -33,6 +33,7 @@ module riscv_core (
     logic [31:0] imm_S;
     logic [31:0] imm_B;
     logic [31:0] imm_J;
+    logic [31:0] imm_Z;
     
     logic flag;
     logic [1:0] a_sel;
@@ -77,7 +78,7 @@ module riscv_core (
     logic [31:0] mtvec;
     
     logic irq_o;
-    logic irq_cause;
+    logic [31:0] irq_cause;
     logic trap;
     assign trap = irq_o || ill_instr; 
     
