@@ -25,6 +25,7 @@ module vga_sb_ctrl (
     logic [31:0] char_tiff_data;
 
     logic [1:0] check;
+    assign check = addr_i[13:12];
 
     vgachargen vga(
         .clk_i      (clk_i),
@@ -64,17 +65,17 @@ module vga_sb_ctrl (
             case(check)
                 0: begin
                     read_data_o = char_map_data;
-                    char_map_we = 1;
+                    char_map_we = write_enable_i;
                 end
             
                 1: begin
                     read_data_o = col_data;
-                    col_we = 1;
+                    col_we = write_enable_i;
                 end
             
                 2: begin
                     read_data_o = char_tiff_data;
-                    char_tiff_we = 1;
+                    char_tiff_we = write_enable_i;
                 end
             
                 default: read_data_o = 0;
