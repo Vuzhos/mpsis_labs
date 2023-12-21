@@ -58,30 +58,39 @@ module vga_sb_ctrl (
     );
     
     always_comb begin
-        char_map_we = 0;
-        col_we = 0;
-        char_tiff_we = 0;
-        if (req_i) begin
-            case(check)
-                0: begin
-                    read_data_o = char_map_data;
-                    char_map_we = write_enable_i;
-                end
-            
-                1: begin
-                    read_data_o = col_data;
-                    col_we = write_enable_i;
-                end
-            
-                2: begin
-                    read_data_o = char_tiff_data;
-                    char_tiff_we = write_enable_i;
-                end
-            
-                default: read_data_o = 0;
-            endcase
-        end 
-        else read_data_o = 0;
+        if(rst_i) begin
+            char_map_we  = 0;
+            col_we   = 0;
+            char_tiff_we = 0;
+        end else begin
+            if (req_i) begin
+                case(check)
+                    0: char_map_we = write_enable_i;
+                    1: col_we = write_enable_i;
+                    2: char_tiff_we = write_enable_i;
+                    default : begin
+                        char_map_we = 0;
+                        col_we = 0;
+                        char_tiff_we = 0;
+                    end
+                endcase
+            end 
+        end
     end
+    
+    always_ff @(posedge clk_i) begin
+        if(rst_i) begin
+            read_data_o <= 0;
+        end else begin
+            if (req_i) begin
+                case(check)
+                    0: read_data_o  <= char_map_data;
+                    1: read_data_o  <= col_data;
+                    2: read_data_o  <= char_tiff_data;
+                    default : read_data_o  <= read_data_o;
+                endcase
+            end
+        end
+  end
     
 endmodule
